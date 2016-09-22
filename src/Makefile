@@ -14,7 +14,7 @@ forDebug: Practica1d.o red-black-treed.o
 	gcc Practica1d.o red-black-treed.o -o progDebug.exe -lm
 	
 Practica1d.o: Practica1.c
-	gcc -g Practica1.c -c Practica1d.o
+	gcc -c Practica1.c -o Practica1d.o
 	
 red-black-treed.o: red-black-tree.c
-	gcc -g red-black-tree.c -c red-black-treed.o
+	gcc -c red-black-tree.c -o red-black-treed.o 
