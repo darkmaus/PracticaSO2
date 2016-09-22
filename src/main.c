@@ -12,8 +12,6 @@
 #include <ctype.h>
 #include <sys/stat.h>
 
-#include "red-black-tree.h"
-
 #define MAXCHAR  100
 
 /**
