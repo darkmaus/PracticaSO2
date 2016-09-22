@@ -19,8 +19,36 @@ void readCSV(char *filename)
     exit(1);
   }
 
-  while (fgets(line, MAXCHAR, fp) != NULL)
-     printf("%s", line);
+  while (fgets(line, MAXCHAR, fp) != NULL){
+    int i=0;
+    int commaCounter=0;
+    int leftFlag=0;
+    int rightFlag=0;
+    while (line[i] != '\0') {
+      if(line[i]==','){
+	leftFlag=rightFlag;
+	rightFlag=i;
+	commaCounter++;
+      }
+	
+      switch(commaCounter){
+	case 4:
+	  line[rightFlag] = '\0';
+	  printf("String: %s\n",&line[leftFlag+1]);
+	  line[rightFlag] = ',';
+	  break;
+	case 15:
+	  break;
+	case 17:
+	  break;
+	case 18:
+	  break;
+	default:
+	  break;
+      }
+      i++;
+    }
+  }
   
   fclose(fp);
 
