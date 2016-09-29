@@ -3,7 +3,7 @@ CFLAGS+= -g -Wall
 LDFLAGS=
 LIBS=-lpthread
 
-test: Practica1.o red-black-tree.o
+test: Practica1.o red-black-tree.o linked-list.o
 	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
 
 %.o: %.c

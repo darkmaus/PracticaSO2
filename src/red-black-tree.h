@@ -4,6 +4,7 @@
  *
  *
  */
+#include "linked-list.h"
 
 #define TYPE_RBTREE_KEY char *
 
@@ -27,6 +28,7 @@ typedef struct RBData_
   // within the structure. You may adapt it to your needs:
   // add or remove fields as you need.
   int num;
+  List *destiny;
 } RBData;
 
 /**
