@@ -106,7 +106,14 @@ void readCSV(char *filename)
 	      /* If the key is not in the list, allocate memory for the data and
 	      * insert it in the list */
 
+	       char *b;
+	      b = (char *) malloc(sizeof(char)*4);
+	      b[0] = a[0];
+	      b[1] = a[1];
+	      b[2] = a[2];
+	      b[3] = '\0';
 	      listData = malloc(sizeof(ListData));
+	      listData->key = b;
 	      listData->delay[dayOfWeek-1]=delay;
 	      listData->delay[dayOfWeek-1+7]=1;
 
