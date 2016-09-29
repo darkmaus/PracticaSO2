@@ -91,7 +91,10 @@ void readCSV(char *filename)
 	    }
 	    break;
 	  case 18:
-	    
+	    a[0] = line[leftFlag+1];
+	    a[1] = line[leftFlag+2];
+	    a[2] = line[leftFlag+3];
+	    a[3] = '\0';
 	    
 	    list = treeData->destiny;
 	    listData = findList(list, a); 
