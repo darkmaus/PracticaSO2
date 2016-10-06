@@ -72,7 +72,7 @@ static int compEQ(TYPE_RBTREE_KEY key1, TYPE_RBTREE_KEY key2)
 
   rc = 0;
 
-  if (key1 == key2)
+  if (*key1 == *key2)
     rc = 1;
 
   return rc;

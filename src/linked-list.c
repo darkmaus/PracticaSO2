@@ -39,7 +39,7 @@ static void freeListData(ListData *data)
 
 static void dumpListData(ListData *data)
 {
-  printf("Key %03d appears %d times\n", data->key, data->numTimes);
+  printf("Key %03d appears %d times\n", data->key, 0);
 }
 
 /**
@@ -55,7 +55,7 @@ static int compEQ(TYPE_LIST_KEY key1, TYPE_LIST_KEY key2)
 
   rc = 0;
 
-  if (key1 == key2)
+  if (*key1 == *key2)
     rc = 1;
 
   return rc;
