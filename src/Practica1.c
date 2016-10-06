@@ -157,7 +157,7 @@ int dotcommaCounter(char *str) {
 int main(void) {
 
 
-    readCSV("file.csv");
+    readCSV("C:\\Users\\Marcos\\ClionProjects\\SOPractica1LLoro\\file.csv");
 
 
     return 0;
