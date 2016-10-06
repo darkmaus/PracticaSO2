@@ -3,7 +3,6 @@
 #include <string.h>
 #include <ctype.h>
 #include <sys/stat.h>
-#include <io.h>
 
 #include "red-black-tree.h"
 
@@ -158,7 +157,7 @@ int dotcommaCounter(char *str) {
 int main(void) {
 
 
-    readCSV("C:\\Users\\Marcos\\ClionProjects\\SOPractica1LLoro\\asd.txt");
+    readCSV("file.csv");
 
 
     return 0;
