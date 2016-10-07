@@ -8,6 +8,10 @@
 
 #define MAXCHAR  100
 
+
+
+
+
 void readCSV(char *filename) {
     RBTree *tree;
     RBData *treeData;
@@ -30,22 +34,31 @@ void readCSV(char *filename) {
         printf("Could not open file '%s'\n", filename);
         exit(1);
     }
-
+    //while we dont reach the end of file
     while (fgets(line, MAXCHAR, fp) != NULL) {
-
+        //var used to iterate over the line chars
         int i = 0;
+        //var used to count the number of commas
         int commaCounter = 0;
+        /*letfFlag & rightFlag are used to flag both of
+         *imits of the value we  need so in this case
+         *they always are commas pointing the end of value
+         */
         int leftFlag = 0;
         int rightFlag = 0;
+        //var used to store the day of week
         int dayOfWeek = 0;
+        // var used to store the delay of flights
         int delay = 0;
+        //This while will iterate over the lines of the file we are reading
         while (line[i] != '\0') {
+            //When we find a comma
             if (line[i] == ',') {
+                //we store the left flag and right flag is where the 'new' comma is
                 leftFlag = rightFlag;
                 rightFlag = i;
+                //we increment commacounter
                 commaCounter++;
-
-
                 switch (commaCounter) {
                     case 4:
                         line[rightFlag] = '\0';
@@ -140,12 +153,20 @@ void readCSV(char *filename) {
 
 }
 
-
+/**
+ * This function will return the number of dots and commas in the string given by param
+ * @param str line of csv file
+ * @return int with number of commas in given string
+ */
 int dotcommaCounter(char *str) {
+    //we will need 2 var used as buffer
+    //one for store the number of commas
     int npunticoma = 0;
+    //another one to iterate over the strings elements
     int i = 0;
-
+    //while we dont reach the end of line
     while (str[i] != '\0') {
+        //if we find a
         if (str[i] == ';')
             npunticoma++;
         i++;
