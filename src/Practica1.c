@@ -11,7 +11,6 @@
 
 
 
-
 void readCSV(char *filename) {
     RBTree *tree;
     RBData *treeData;
@@ -79,7 +78,6 @@ void readCSV(char *filename) {
                         treeData = findNode(tree, a);
 
                         if (treeData != NULL) {
-
                             /* If the key is in the tree increment 'num' */
                             treeData->num++;
                         } else {
@@ -145,40 +143,20 @@ void readCSV(char *filename) {
         printf("Line: %d\n", lineCounter);
         lineCounter++;
     }
-
+    // we delete the tree from the memory
     deleteTree(tree);
+    //we close the file
     fclose(fp);
+    //we free all auxiliary data used.
     free(a);
     free(line);
 
 }
 
-/**
- * This function will return the number of dots and commas in the string given by param
- * @param str line of csv file
- * @return int with number of commas in given string
- */
-int dotcommaCounter(char *str) {
-    //we will need 2 var used as buffer
-    //one for store the number of commas
-    int npunticoma = 0;
-    //another one to iterate over the strings elements
-    int i = 0;
-    //while we dont reach the end of line
-    while (str[i] != '\0') {
-        //if we find a
-        if (str[i] == ';')
-            npunticoma++;
-        i++;
-    }
-
-    return npunticoma;
-}
-
 int main(void) {
 
 
-    readCSV("C:\\Users\\Marcos\\ClionProjects\\SOPractica1LLoro\\file.csv");
+    readCSV("file.csv");
 
 
     return 0;
