@@ -29,6 +29,7 @@
 
 static void freeListData(ListData *data)
 {
+  free(data->key);
   free(data); 
 }
 
