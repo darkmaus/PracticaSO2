@@ -314,6 +314,7 @@ static void deleteTreeRecursive(Node *x)
   if (x->left != NIL)
     deleteTreeRecursive(x->left);
 
+  deleteList(x->data->destiny);
   freeRBData(x->data);
   free(x);
 }

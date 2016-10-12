@@ -8,14 +8,12 @@
 
 #define MAXCHAR  100
 
-
+void checkItemDelayOnArrival(List *list, char *c, int dayOfWeek, int delay);
 
 
 void readCSV(char *filename) {
     RBTree *tree;
     RBData *treeData;
-    ListData *listData;
-    List *list;
 
     FILE *fp;
     char *line;
@@ -106,32 +104,8 @@ void readCSV(char *filename) {
                         c[2] = line[leftFlag + 3];
                         c[3] = '\0';
 
-                        list = treeData->destiny;
-                        listData = findList(list, c);
-
-                        if (listData != NULL) {
-
-                            /* We increment the number of times current item has appeared */
-                            listData->delay[dayOfWeek - 1] += delay;
-                            listData->delay[dayOfWeek - 1 + 7]++;
-                        } else {
-
-                            /* If the key is not in the list, allocate memory for the data and
-                            * insert it in the list */
-
-                            char *b;
-                            b = (char *) malloc(sizeof(char) * 4);
-                            b[0] = c[0];
-                            b[1] = c[1];
-                            b[2] = c[2];
-                            b[3] = '\0';
-                            listData = calloc(1,sizeof(ListData));
-                            listData->key = b;
-                            listData->delay[dayOfWeek - 1] = delay;
-                            listData->delay[dayOfWeek - 1 + 7] = 1;
-
-                            insertList(list, listData);
-                        }
+                        checkItemDelayOnArrival(treeData->destiny, c, dayOfWeek, delay);
+                        free(c);
                     }
                         break;
                     default:
@@ -156,8 +130,37 @@ void readCSV(char *filename) {
 int main(void) {
 
 
-    readCSV("file.csv");
+    readCSV("C:\\Users\\Marcos\\ClionProjects\\SOPractica1LLoro\\file.csv");
 
 
     return 0;
+}
+
+void checkItemDelayOnArrival(List *list, char *c, int dayOfWeek, int delay){
+    ListData *listData;
+    listData = findList(list, c);
+
+    if (listData != NULL) {
+
+        /* We increment the number of times current item has appeared */
+        listData->delay[dayOfWeek - 1] += delay;
+        listData->delay[dayOfWeek - 1 + 7]++;
+    } else {
+
+        /* If the key is not in the list, allocate memory for the data and
+        * insert it in the list */
+
+        char *b;
+        b = (char *) malloc(sizeof(char) * 4);
+        b[0] = c[0];
+        b[1] = c[1];
+        b[2] = c[2];
+        b[3] = '\0';
+        listData = calloc(1,sizeof(ListData));
+        listData->key = b;
+        listData->delay[dayOfWeek - 1] = delay;
+        listData->delay[dayOfWeek - 1 + 7] = 1;
+
+        insertList(list, listData);
+    }
 }
