@@ -39,6 +39,7 @@ static void freeRBData(RBData *data)
 {
   deleteList(data->destiny);
   free(data->key);
+  free(data->destiny);
   free(data);
 }
 
