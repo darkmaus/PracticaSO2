@@ -6,27 +6,22 @@
 
 #include "red-black-tree.h"
 
-#define MAXCHAR  100
+#define MAXCHAR  200
 
 void destinyFunc(List *list, char *destiny, int dayOfWeek, int delay);
 void originFunc(RBTree *tree,RBData ** treeData,char *origin);
-void processLine(char *line, char *origin, char *destiny, RBTree **tree);
+void processLine(char *line, RBTree **tree);
 void count(int reset);
+int hashIndex(char *str,int seed,int hashSize);
+void initHashList(List *list,char *origin, char *destiny, int dayOfWeek, int delay);
+char **readNLines(FILE * fp,int numberOfLines);
+List ** generateHash(char **str,int maxHashSize,int nLines);
 
 void readCSV(char *filename) {
     RBTree *tree;
 
     FILE *fp;
     char *line;
-
-    char *origin;
-    char *destiny;
-
-    origin = (char *) malloc(sizeof(char) * 4);
-    origin[3] = '\0';
-
-    destiny = (char *) malloc(sizeof(char)*4);
-    destiny[3] = '\0';
 
     line = (char *) malloc(sizeof(char) * MAXCHAR);
     tree = (RBTree *) malloc(sizeof(RBTree));
@@ -39,17 +34,19 @@ void readCSV(char *filename) {
         exit(1);
     }
     //while we dont reach the end of file
+    /**
     while (fgets(line, MAXCHAR, fp) != NULL) {
-        processLine(line, origin, destiny, &tree);
+        processLine(line, &tree);
         count(0);
     }
+     **/
+    generateHash(readNLines(fp,100),500,100);
     // we delete the tree from the memory
     deleteTree(tree);
     //we close the file
     fclose(fp);
     //we free all auxiliary data used.
-    free(origin);
-    free(destiny);
+
     free(line);
 
 }
@@ -66,7 +63,7 @@ int main(void) {
 void destinyFunc(List *list, char *destiny, int dayOfWeek, int delay){
 
     ListData *listData;
-    listData = findList(list, destiny);
+    listData = findListBySelectingKey(list, destiny,0);
 
     if (listData != NULL) {
 
@@ -105,7 +102,7 @@ void originFunc(RBTree *tree,RBData ** treeData,char *origin){
         /* If the key is not in the tree, allocate memory for the data
          * and insert in the tree */
         char *b;
-        b = (char *) malloc(sizeof(char) * 4);
+        b = (char *) calloc(4,sizeof(char));
         b[0] = origin[0];
         b[1] = origin[1];
         b[2] = origin[2];
@@ -113,13 +110,60 @@ void originFunc(RBTree *tree,RBData ** treeData,char *origin){
         (*treeData) = malloc(sizeof(RBData));
         (*treeData)->key = b;
         (*treeData)->num = 1;
-        (*treeData)->destiny = malloc(sizeof(List));
+        (*treeData)->destiny = calloc(1,sizeof(List));
         initList((*treeData)->destiny);
         insertNode(tree, (*treeData));
     }
 }
 
-void processLine(char *line, char *origin, char *destiny, RBTree **tree){
+void initHashList(List *list,char *origin, char *destiny, int dayOfWeek, int delay){
+
+    ListData *listData;
+    listData = findListBySelectingKey(list, destiny,0);
+
+    if (listData != NULL) {
+
+        /* We increment the number of times current item has appeared */
+        listData->delay[dayOfWeek - 1] += delay;
+        listData->delay[dayOfWeek - 1 + 7]++;
+    } else {
+
+        /* If the key is not in the list, allocate memory for the data and
+        * insert it in the list */
+
+        char *b;
+        b = (char *) malloc(sizeof(char) * 4);
+        b[0] = destiny[0];
+        b[1] = destiny[1];
+        b[2] = destiny[2];
+        b[3] = '\0';
+        char *c;
+        c = (char *) malloc(sizeof(char) * 4);
+        c[0] = origin[0];
+        c[1] = origin[1];
+        c[2] = origin[2];
+        c[3] = '\0';
+        listData = calloc(1,sizeof(ListData));
+        listData->key = b;
+        listData->key_sec = c;
+        listData->delay[dayOfWeek - 1] = delay;
+        listData->delay[dayOfWeek - 1 + 7] = 1;
+
+        insertList(list, listData);
+    }
+}
+
+void processLine(char *line, RBTree **tree){
+
+    char *origin;
+    char *destiny;
+
+    origin = (char *) calloc(4,sizeof(char));
+    origin[3] = '\0';
+
+    destiny = (char *) calloc(4,sizeof(char));
+    destiny[3] = '\0';
+
 
     RBData *treeData;
     //var used to iterate over the line chars
@@ -174,12 +218,15 @@ void processLine(char *line, char *origin, char *destiny, RBTree **tree){
         }
         i++;
     }
-    originFunc(*tree,&treeData,origin);
-    destinyFunc(treeData->destiny, destiny, dayOfWeek, delay);
 
+    if(strcmp(origin,"")!=0 && strcmp(destiny,"")!=0){
+        originFunc(*tree, &treeData, origin);
+        destinyFunc(treeData->destiny, destiny, dayOfWeek, delay);
+    }
+
+    free(origin);
+    free(destiny);
 }
-
-
 
 void count(int reset){
 
@@ -191,4 +238,128 @@ void count(int reset){
     }
     printf("%d\n",counter);
 
+}
+
+int hashIndex(char *str,int seed,int hashSize){
+
+    int sum,i,len;
+
+    len = strlen(str);
+    sum = 0;
+    for(i = 0; i < len; i++)
+        sum = sum * seed + (int)str[i];
+
+    return sum % hashSize;
+
+}
+
+List ** generateHash(char **str,int maxHashSize,int nLines){
+
+    List ** hash;
+
+    int j,k;
+
+    char *origin;
+    char *destiny;
+
+    hash = (List **) calloc(maxHashSize,sizeof(List *));
+    for(k=0;k<maxHashSize;k++){
+        hash[k] = (List *) -1;
+    }
+
+    origin = (char *) calloc(4,sizeof(char));
+    origin[3] = '\0';
+
+    destiny = (char *) calloc(4,sizeof(char));
+    destiny[3] = '\0';
+
+    for(j=0;j<nLines;j++){
+
+        int i = 0;
+        //var used to count the number of commas
+        int commaCounter = 0;
+        /*letfFlag & rightFlag are used to flag both of
+         *imits of the value we  need so in this case
+         *they always are commas pointing the end of value
+         */
+        int leftFlag = 0;
+        int rightFlag = 0;
+
+        int hashValue = 0;
+        //var used to store the day of week
+        int dayOfWeek = 0;
+        // var used to store the delay of flights
+        int delay = 0;
+        //This while will iterate over the lines of the file we are reading
+        while (str[j][i] != '\0') {
+            //When we find a comma
+            if (str[j][i] == ',') {
+                //we store the left flag and right flag is where the 'new' comma is
+                leftFlag = rightFlag;
+                rightFlag = i;
+                //we increment commacounter
+                commaCounter++;
+                switch (commaCounter) {
+                    case 4:
+                        str[j][rightFlag] = '\0';
+                        dayOfWeek = atoi(&str[j][leftFlag + 1]);
+                        str[j][rightFlag] = ',';
+                        break;
+                    case 15:
+                        str[j][rightFlag] = '\0';
+                        delay = atoi(&str[j][leftFlag + 1]);
+                        str[j][rightFlag] = ',';
+                        break;
+                    case 17:
+                        origin[0] = str[j][leftFlag + 1];
+                        origin[1] = str[j][leftFlag + 2];
+                        origin[2] = str[j][leftFlag + 3];
+                        //printf("String: %s\n", origin);
+                        break;
+                    case 18: {
+                        destiny[0] = str[j][leftFlag + 1];
+                        destiny[1] = str[j][leftFlag + 2];
+                        destiny[2] = str[j][leftFlag + 3];
+                    }
+                        break;
+                    default:
+                        break;
+                }
+            }
+            i++;
+        }
+
+        hashValue = hashIndex(origin,2109,maxHashSize);
+        if(hash[hashValue] == (List *) -1){
+            hash[hashValue] = (List *) calloc(1,sizeof(List));
+        }
+        initHashList(hash[hashValue],origin,destiny,dayOfWeek,delay);
+
+    }
+
+    free(origin);
+    free(destiny);
+
+    return hash;
+
+}
+
+char **readNLines(FILE * fp,int numberOfLines){
+
+    int counter=0;
+    char *line;
+    char **lineVector;
+    lineVector = (char **) calloc(numberOfLines,sizeof(char *));
+    line = (char *) calloc(MAXCHAR,sizeof(char));
+
+    while(fgets(line, MAXCHAR, fp) != NULL && counter<numberOfLines){
+
+        lineVector[counter] = line;
+        line = (char *) calloc(MAXCHAR,sizeof(char));
+
+        counter++;
+    }
+    free(line);
+
+    return lineVector;
 }

@@ -32,6 +32,7 @@
 typedef struct ListData_ {
   // The variable used to index the list has to be called "key".
   TYPE_LIST_KEY key;
+  TYPE_LIST_KEY key_sec;
 
   // This is the additional information that will be stored
   // within the structure. This additional information is associated
@@ -74,6 +75,8 @@ typedef struct List_ {
 void initList(List *l);
 void insertList(List *l, ListData *data);
 ListData *findList(List *l, TYPE_LIST_KEY key);
+ListData *findListBySelectingKey(List *l, TYPE_LIST_KEY key,int i);
+ListData *findBySecondKeyList(List *l, TYPE_LIST_KEY key);
 void deleteFirstList(List *l);
 void deleteList(List *l);
 void dumpList(List *l);

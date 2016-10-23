@@ -30,6 +30,7 @@
 static void freeListData(ListData *data)
 {
   free(data->key);
+  free(data->key_sec);
   free(data); 
 }
 
@@ -61,6 +62,32 @@ static int compEQ(TYPE_LIST_KEY key1, TYPE_LIST_KEY key2)
     rc = 1;
 
   return rc;
+}
+
+
+ListData *findListBySelectingKey(List *l, TYPE_LIST_KEY key,int i){
+  if(i==0){
+    return findList(l,key);
+  }else{
+    return findBySecondKeyList(l,key);
+  }
+}
+
+ListData *findBySecondKeyList(List *l, TYPE_LIST_KEY key)
+{
+  ListItem *current;
+
+  current = l->first;
+
+  while (current != NULL)
+  {
+    if (compEQ(current->data->key_sec, key))
+      return (current->data);
+
+    current = current->next;
+  }
+
+  return (NULL);
 }
 
 /**
