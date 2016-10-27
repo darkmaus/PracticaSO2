@@ -7,6 +7,7 @@
 #include "red-black-tree.h"
 
 #define MAXCHAR  200
+#define MAXHASHSIZE 500
 
 void destinyFunc(List *list, char *destiny, int dayOfWeek, int delay);
 void originFunc(RBTree *tree,RBData ** treeData,char *origin);
@@ -16,6 +17,11 @@ int hashIndex(char *str,int seed,int hashSize);
 void initHashList(List *list,char *origin, char *destiny, int dayOfWeek, int delay);
 char **readNLines(FILE * fp,int numberOfLines);
 List ** generateHash(char **str,int maxHashSize,int nLines);
+void addHashToTree(List **hash,int maxHashSize, RBTree *tree);
+void mergeLists(RBData *treeData, List* hashList);
+void deleteHash(List **hash,int maxHashSize);
+ListData * copyListData(ListData *list);
+List * copyList(List *list);
 
 void readCSV(char *filename) {
     RBTree *tree;
@@ -40,7 +46,7 @@ void readCSV(char *filename) {
         count(0);
     }
      **/
-    generateHash(readNLines(fp,100),500,100);
+    addHashToTree(generateHash(readNLines(fp,100),MAXHASHSIZE,100),MAXHASHSIZE,tree);
     // we delete the tree from the memory
     deleteTree(tree);
     //we close the file
@@ -332,6 +338,7 @@ List ** generateHash(char **str,int maxHashSize,int nLines){
         hashValue = hashIndex(origin,2109,maxHashSize);
         if(hash[hashValue] == (List *) -1){
             hash[hashValue] = (List *) calloc(1,sizeof(List));
+            initList(hash[hashValue]);
         }
         initHashList(hash[hashValue],origin,destiny,dayOfWeek,delay);
 
@@ -342,6 +349,63 @@ List ** generateHash(char **str,int maxHashSize,int nLines){
 
     return hash;
 
+}
+
+void addHashToTree(List **hash,int maxHashSize, RBTree *tree){
+
+    int i;
+
+    for(i=0;i<maxHashSize;i++){
+        if(hash[i]!=(List *)-1){
+            RBData *treeData = NULL;
+            treeData = findNode(tree, hash[i]->first->data->key_sec);
+
+            if (treeData != NULL) {
+                mergeLists(treeData,hash[i]);
+            } else {
+
+                /* If the key is not in the tree, allocate memory for the data
+                 * and insert in the tree */
+                char *b, *origin;
+                origin = hash[i]->first->data->key_sec;
+                b = (char *) calloc(4,sizeof(char));
+                b[0] = origin[0];
+                b[1] = origin[1];
+                b[2] = origin[2];
+                b[3] = '\0';
+                treeData = malloc(sizeof(RBData));
+                treeData->key = b;
+                treeData->num = 1;
+                treeData->destiny = copyList(hash[i]);
+                insertNode(tree, treeData);
+            }
+        }
+    }
+
+    deleteHash(hash,maxHashSize);
+}
+
+void mergeLists(RBData *treeData, List* hashList){
+
+    int i,j,k;
+    ListItem *currentItem,*currentTreeItem;
+    currentItem = hashList->first;
+    currentTreeItem = treeData->destiny->first;
+    for(i=1;i<hashList->numItems;i++){
+        for(j=1;j<treeData->destiny->numItems;j++){
+            if(strcmp(currentTreeItem->data->key,currentItem->data->key)==0){
+                for(k=0;k<14;k++){
+                    currentTreeItem->data->delay[k]+=currentItem->data->delay[k];
+                }
+            }else{
+                //ListData *auxiliar;
+                //auxiliar = (ListData *) malloc(sizeof(ListData));
+                //memcpy((void *)auxiliar,currentItem->data,sizeof(ListData));
+                insertList(treeData->destiny, copyListData(currentItem->data));
+            }
+        }
+    }
+    treeData->num = treeData->destiny->numItems;
 }
 
 char **readNLines(FILE * fp,int numberOfLines){
@@ -362,4 +426,53 @@ char **readNLines(FILE * fp,int numberOfLines){
     free(line);
 
     return lineVector;
+}
+
+ListData * copyListData(ListData *list){
+
+    ListData *newListData;
+    newListData = malloc(sizeof(ListData));
+
+    memcpy(newListData->delay,list->delay,sizeof(int)*14);
+    newListData->key = malloc(sizeof(char)*4);
+    newListData->key_sec = malloc(sizeof(char)*4);
+    strcpy(newListData->key,list->key);
+    strcpy(newListData->key_sec,list->key_sec);
+
+    return newListData;
+}
+
+List * copyList(List *list){
+
+    int i;
+    List *newList;
+    ListItem *current;
+
+    current = list->first;
+    newList = malloc(sizeof(List));
+    initList(newList);
+
+    for(i=0;i<list->numItems;i++){
+        insertList(newList,copyListData(current->data));
+        current = current->next;
+    }
+
+    return newList;
+
+}
+
+void deleteHash(List **hash,int maxHashSize){
+
+    int i;
+
+    for(i=0;i<maxHashSize;i++){
+
+        if(hash[i]!=(List *)-1){
+            deleteList(hash[i]);
+            free(hash[i]);
+        }
+
+    }
+
+    free(hash);
 }
