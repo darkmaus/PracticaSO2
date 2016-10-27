@@ -22,11 +22,14 @@ void mergeLists(RBData *treeData, List* hashList);
 void deleteHash(List **hash,int maxHashSize);
 ListData * copyListData(ListData *list);
 List * copyList(List *list);
+void freeLines(char **strVec,int lineNumber);
 
 void readCSV(char *filename) {
     RBTree *tree;
 
     FILE *fp;
+	char **lines;
+	List **hash;
     //char *line;
 
     //line = (char *) malloc(sizeof(char) * MAXCHAR);
@@ -46,13 +49,16 @@ void readCSV(char *filename) {
         count(0);
     }
      **/
-    addHashToTree(generateHash(readNLines(fp,2000),MAXHASHSIZE,2000),MAXHASHSIZE,tree);
+	lines = readNLines(fp,2000);
+	hash = generateHash(lines,MAXHASHSIZE,2000);
+    addHashToTree(hash,MAXHASHSIZE,tree);
     // we delete the tree from the memory
     deleteTree(tree);
     //we close the file
     fclose(fp);
     //we free all auxiliary data used.
-    free(tree);
+	freeLines(lines,2000);
+	deleteHash(hash,MAXHASHSIZE);
     //free(line);
 
 }
@@ -60,7 +66,7 @@ void readCSV(char *filename) {
 int main(void) {
 
     //C:\Users\Marcos\ClionProjects\SOPractica1Lloro\file.csv
-    readCSV("C:\\Users\\Marcos\\ClionProjects\\SOPractica1Lloro\\file.csv");
+    readCSV("file.csv");
 
 
     return 0;
@@ -122,6 +128,7 @@ void originFunc(RBTree *tree,RBData ** treeData,char *origin){
     }
 }
 
+//This method adds a list to the hash, sets the two keys , delays and day of week.
 void initHashList(List *list,char *origin, char *destiny, int dayOfWeek, int delay){
 
     ListData *listData;
@@ -159,6 +166,7 @@ void initHashList(List *list,char *origin, char *destiny, int dayOfWeek, int del
     }
 }
 
+//Main function of Practica1, the first part.
 void processLine(char *line, RBTree **tree){
 
     char *origin;
@@ -234,6 +242,7 @@ void processLine(char *line, RBTree **tree){
     free(destiny);
 }
 
+//Function that counts and prints it's count.
 void count(int reset){
 
     static int counter = 0;
@@ -246,6 +255,7 @@ void count(int reset){
 
 }
 
+//Function that returns an int value over from an string a seed and a hashSize.
 int hashIndex(char *str,int seed,int hashSize){
 
     int sum,i,len;
@@ -259,6 +269,8 @@ int hashIndex(char *str,int seed,int hashSize){
 
 }
 
+//Function that returns a vector of List that is our hash vector, str is the vector of strings
+//readed from the file with other function. nLines is the number of lines.
 List ** generateHash(char **str,int maxHashSize,int nLines){
 
     List ** hash;
@@ -351,6 +363,7 @@ List ** generateHash(char **str,int maxHashSize,int nLines){
 
 }
 
+//Function that adds the hash map to the current tree.
 void addHashToTree(List **hash,int maxHashSize, RBTree *tree){
 
     int i;
@@ -382,9 +395,9 @@ void addHashToTree(List **hash,int maxHashSize, RBTree *tree){
         }
     }
 
-    deleteHash(hash,maxHashSize);
 }
 
+//Function that adds a list to another list in the tree.
 void mergeLists(RBData *treeData, List* hashList){
 
     int i,j,k;
@@ -408,6 +421,7 @@ void mergeLists(RBData *treeData, List* hashList){
     treeData->num = treeData->destiny->numItems;
 }
 
+//Function that reads numberOfLines lines of the file.
 char **readNLines(FILE * fp,int numberOfLines){
 
     int counter=0;
@@ -428,6 +442,7 @@ char **readNLines(FILE * fp,int numberOfLines){
     return lineVector;
 }
 
+//Function that copy a ListData struct to another.
 ListData * copyListData(ListData *list){
 
     ListData *newListData;
@@ -442,6 +457,7 @@ ListData * copyListData(ListData *list){
     return newListData;
 }
 
+//Function that copy a List struct to another.
 List * copyList(List *list){
 
     int i;
@@ -461,6 +477,7 @@ List * copyList(List *list){
 
 }
 
+//Function that deletes all the content of the hash and free's the hash.
 void deleteHash(List **hash,int maxHashSize){
 
     int i;
@@ -475,4 +492,16 @@ void deleteHash(List **hash,int maxHashSize){
     }
 
     free(hash);
+}
+
+//Function that free's all the readed lines.
+void freeLines(char **strVec,int lineNumber){
+	
+	int i;
+	for(i=0;i<lineNumber;i++){
+		free(strVec[i]);
+	}
+
+	free(strVec);
+
 }
