@@ -27,9 +27,9 @@ void readCSV(char *filename) {
     RBTree *tree;
 
     FILE *fp;
-    char *line;
+    //char *line;
 
-    line = (char *) malloc(sizeof(char) * MAXCHAR);
+    //line = (char *) malloc(sizeof(char) * MAXCHAR);
     tree = (RBTree *) malloc(sizeof(RBTree));
 
     initTree(tree);
@@ -46,14 +46,14 @@ void readCSV(char *filename) {
         count(0);
     }
      **/
-    addHashToTree(generateHash(readNLines(fp,100),MAXHASHSIZE,100),MAXHASHSIZE,tree);
+    addHashToTree(generateHash(readNLines(fp,2000),MAXHASHSIZE,2000),MAXHASHSIZE,tree);
     // we delete the tree from the memory
     deleteTree(tree);
     //we close the file
     fclose(fp);
     //we free all auxiliary data used.
-
-    free(line);
+    free(tree);
+    //free(line);
 
 }
 
