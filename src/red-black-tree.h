@@ -71,4 +71,5 @@ void initTree(RBTree *tree);
 void insertNode(RBTree *tree, RBData *data);
 RBData *findNode(RBTree *tree, TYPE_RBTREE_KEY key); 
 void deleteTree(RBTree *tree);
-
+void writeNode(Node * node,FILE *f);
+void writeList(FILE *fp,List *list);

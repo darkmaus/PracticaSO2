@@ -91,6 +91,32 @@ static int compEQ(TYPE_RBTREE_KEY key1, TYPE_RBTREE_KEY key2)
 #define NIL &sentinel           /* all leafs are sentinels */
 static Node sentinel = { NIL, NIL, 0, BLACK, NULL};
 
+void writeNode(Node * node,FILE *f){
+
+  fwrite(node->data->key,sizeof(char),4,f);
+  writeList(f,node->data->destiny);
+  if(node->right!=NIL){
+    writeNode(node->right,f);
+  }
+  if(node->left!=NIL){
+    writeNode(node->left,f);
+  }
+}
+
+void writeList(FILE *fp,List *list){
+
+  ListItem *current;
+  current = list->first;
+  fwrite(&(list->numItems),sizeof(int),1,fp);
+  while(current!=NULL){
+    fwrite(current->data->key,sizeof(char),4,fp);
+    fwrite(current->data->key_sec,sizeof(char),4,fp);
+    fwrite(current->data->delay,sizeof(int),14,fp);
+    current = current->next;
+  }
+
+}
+
 /**
  *
  * Initialize the tree.

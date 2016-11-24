@@ -8,11 +8,8 @@
 
 #define MAXCHAR  200
 #define MAXHASHSIZE 500
+#define N 1000
 
-void destinyFunc(List *list, char *destiny, int dayOfWeek, int delay);
-void originFunc(RBTree *tree,RBData ** treeData,char *origin);
-void processLine(char *line, RBTree **tree);
-void count(int reset);
 int hashIndex(char *str,int seed,int hashSize);
 void initHashList(List *list,char *origin, char *destiny, int dayOfWeek, int delay);
 char **readNLines(FILE * fp,int numberOfLines);
@@ -23,16 +20,80 @@ void deleteHash(List **hash,int maxHashSize);
 ListData * copyListData(ListData *list);
 List * copyList(List *list);
 void freeLines(char **strVec,int lineNumber);
+RBTree * createTree(char *filename);
+List * readList(FILE *fp);
+RBTree * readTree(char * filename);
 
-void readCSV(char *filename) {
-    RBTree *tree;
+int main(void) {
 
+    //C:\Users\Marcos\ClionProjects\SOPractica1Lloro\file.csv
+    //C:\Users\Marcos\Desktop\Practica1SO2\src\file.csv
+    RBTree *tree = NULL;
+    char *filename;
+    char *input;
+    FILE *f = NULL;
+    while(1){
+        input = calloc(2,sizeof(char));
+        filename = calloc(100,sizeof(char));
+        printf("__________________________\n");
+        printf("Opciones:\n");
+        printf("1 - Crear arbol\n");
+        printf("2 - Almacenar arbol\n");
+        printf("3 - Leer arbol\n");
+        printf("4 - Grafica de retraso\n");
+        printf("5 - Salir\n");
+        printf("__________________________\n\n");
+        scanf(" %1s",input);
+
+        switch(input[0]){
+            case '1': {
+                printf("Introduca el nombre del archivo: ");
+                scanf("%s",filename);
+                if (tree != NULL) {
+                    deleteTree(tree);
+                }
+                tree = createTree(filename);
+                }
+                break;
+            case '2':
+                printf("Introduca el nombre del archivo donde almacenarlo:\n");
+                scanf("%s",filename);
+                if(tree != NULL){
+                    f=fopen(filename,"w");
+                    writeNode(tree->root,f);
+                    fclose(f);
+                }
+                break;
+            case '3':
+                printf("Introduca el nombre del archivo de donde leerlo:\n");
+                scanf("%s",filename);
+                tree = readTree(filename);
+                break;
+            case '4':
+                printf("Introduca el nombre del archivo donde hacer el plot:\n");
+                scanf("%s",filename);
+                break;
+            case '5':
+                if(tree != NULL){
+                    deleteTree(tree);
+                }
+                return 0;
+            default:
+                printf("ATENCION: Opcion no reconocida\n");
+                printf("Introduca otra opcion\n");
+                break;
+        }
+        free(filename);
+
+
+    }
+}
+
+RBTree * createTree(char *filename){
+    char **lines;
     FILE *fp;
-	char **lines;
-	List **hash;
-    //char *line;
-
-    //line = (char *) malloc(sizeof(char) * MAXCHAR);
+    List **hash;
+    RBTree *tree;
     tree = (RBTree *) malloc(sizeof(RBTree));
 
     initTree(tree);
@@ -49,83 +110,17 @@ void readCSV(char *filename) {
         count(0);
     }
      **/
-	lines = readNLines(fp,2000);
-	hash = generateHash(lines,MAXHASHSIZE,2000);
+
+    lines = readNLines(fp,N);
+    hash = generateHash(lines,MAXHASHSIZE,N);
     addHashToTree(hash,MAXHASHSIZE,tree);
-    // we delete the tree from the memory
-    deleteTree(tree);
-    //we close the file
+
     fclose(fp);
     //we free all auxiliary data used.
-	freeLines(lines,2000);
-	deleteHash(hash,MAXHASHSIZE);
-    //free(line);
+    freeLines(lines,N);
+    deleteHash(hash,MAXHASHSIZE);
 
-}
-
-int main(void) {
-
-    //C:\Users\Marcos\ClionProjects\SOPractica1Lloro\file.csv
-    readCSV("file.csv");
-
-
-    return 0;
-}
-
-void destinyFunc(List *list, char *destiny, int dayOfWeek, int delay){
-
-    ListData *listData;
-    listData = findListBySelectingKey(list, destiny,0);
-
-    if (listData != NULL) {
-
-        /* We increment the number of times current item has appeared */
-        listData->delay[dayOfWeek - 1] += delay;
-        listData->delay[dayOfWeek - 1 + 7]++;
-    } else {
-
-        /* If the key is not in the list, allocate memory for the data and
-        * insert it in the list */
-
-        char *b;
-        b = (char *) malloc(sizeof(char) * 4);
-        b[0] = destiny[0];
-        b[1] = destiny[1];
-        b[2] = destiny[2];
-        b[3] = '\0';
-        listData = calloc(1,sizeof(ListData));
-        listData->key = b;
-        listData->delay[dayOfWeek - 1] = delay;
-        listData->delay[dayOfWeek - 1 + 7] = 1;
-
-        insertList(list, listData);
-    }
-}
-
-void originFunc(RBTree *tree,RBData ** treeData,char *origin){
-
-    (*treeData) = findNode(tree, origin);
-
-    if ((*treeData) != NULL) {
-        /* If the key is in the tree increment 'num' */
-        (*treeData)->num++;
-    } else {
-
-        /* If the key is not in the tree, allocate memory for the data
-         * and insert in the tree */
-        char *b;
-        b = (char *) calloc(4,sizeof(char));
-        b[0] = origin[0];
-        b[1] = origin[1];
-        b[2] = origin[2];
-        b[3] = '\0';
-        (*treeData) = malloc(sizeof(RBData));
-        (*treeData)->key = b;
-        (*treeData)->num = 1;
-        (*treeData)->destiny = calloc(1,sizeof(List));
-        initList((*treeData)->destiny);
-        insertNode(tree, (*treeData));
-    }
+    return tree;
 }
 
 //This method adds a list to the hash, sets the two keys , delays and day of week.
@@ -164,95 +159,6 @@ void initHashList(List *list,char *origin, char *destiny, int dayOfWeek, int del
 
         insertList(list, listData);
     }
-}
-
-//Main function of Practica1, the first part.
-void processLine(char *line, RBTree **tree){
-
-    char *origin;
-    char *destiny;
-
-    origin = (char *) calloc(4,sizeof(char));
-    origin[3] = '\0';
-
-    destiny = (char *) calloc(4,sizeof(char));
-    destiny[3] = '\0';
-
-
-    RBData *treeData;
-    //var used to iterate over the line chars
-    int i = 0;
-    //var used to count the number of commas
-    int commaCounter = 0;
-    /*letfFlag & rightFlag are used to flag both of
-     *imits of the value we  need so in this case
-     *they always are commas pointing the end of value
-     */
-    int leftFlag = 0;
-    int rightFlag = 0;
-    //var used to store the day of week
-    int dayOfWeek = 0;
-    // var used to store the delay of flights
-    int delay = 0;
-    //This while will iterate over the lines of the file we are reading
-    while (line[i] != '\0') {
-        //When we find a comma
-        if (line[i] == ',') {
-            //we store the left flag and right flag is where the 'new' comma is
-            leftFlag = rightFlag;
-            rightFlag = i;
-            //we increment commacounter
-            commaCounter++;
-            switch (commaCounter) {
-                case 4:
-                    line[rightFlag] = '\0';
-                    dayOfWeek = atoi(&line[leftFlag + 1]);
-                    line[rightFlag] = ',';
-                    break;
-                case 15:
-                    line[rightFlag] = '\0';
-                    delay = atoi(&line[leftFlag + 1]);
-                    line[rightFlag] = ',';
-                    break;
-                case 17:
-                    origin[0] = line[leftFlag + 1];
-                    origin[1] = line[leftFlag + 2];
-                    origin[2] = line[leftFlag + 3];
-                    //printf("String: %s\n", origin);
-                    break;
-                case 18: {
-                    destiny[0] = line[leftFlag + 1];
-                    destiny[1] = line[leftFlag + 2];
-                    destiny[2] = line[leftFlag + 3];
-                }
-                    break;
-                default:
-                    break;
-            }
-        }
-        i++;
-    }
-
-    if(strcmp(origin,"")!=0 && strcmp(destiny,"")!=0){
-        originFunc(*tree, &treeData, origin);
-        destinyFunc(treeData->destiny, destiny, dayOfWeek, delay);
-    }
-
-    free(origin);
-    free(destiny);
-}
-
-//Function that counts and prints it's count.
-void count(int reset){
-
-    static int counter = 0;
-    if(reset==0){
-        counter++;
-    }else{
-        counter=0;
-    }
-    printf("%d\n",counter);
-
 }
 
 //Function that returns an int value over from an string a seed and a hashSize.
@@ -505,3 +411,56 @@ void freeLines(char **strVec,int lineNumber){
 	free(strVec);
 
 }
+
+
+
+List * readList(FILE *fp){
+
+    int numberOfItems,i;
+    char *keyForRead;
+    List *list;
+    ListData *data;
+    list = (List *)malloc(sizeof(List));
+    initList(list);
+
+
+    fread(&numberOfItems,sizeof(int),1,fp);
+    for(i=0;i<numberOfItems;i++){
+        data = malloc(sizeof(ListData));
+        
+        keyForRead = malloc(4*sizeof(char));
+        fread(keyForRead,sizeof(char),4,fp);
+        data->key = keyForRead;
+
+        keyForRead = malloc(4*sizeof(char));
+        fread(keyForRead,sizeof(char),4,fp);
+        data->key_sec = keyForRead;
+
+        fread(data->delay,sizeof(int),14,fp);
+        insertList(list,data);
+    }
+    return list;
+}
+
+
+RBTree * readTree(char * filename){
+    FILE *f;
+    RBTree * tree;
+    RBData *data;
+    char *key;
+    tree = malloc(sizeof(tree));
+    key = malloc(4*sizeof(char));
+    initTree(tree);
+    f = fopen(filename,"r");
+    while(fread(key,sizeof(char),4,f)!=0){
+        printf("%s\n",key);
+        data = malloc(sizeof(RBData));
+        data->key = key;
+        data->destiny = readList(f);
+        insertNode(tree,data);
+        key = malloc(4*sizeof(char));
+    }
+    fclose(f);
+    return tree;
+}
+
