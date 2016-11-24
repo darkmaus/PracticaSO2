@@ -10,6 +10,8 @@
 #define MAXHASHSIZE 500
 #define N 1000
 
+#define GNUPLOT "gnuplot -persist"
+
 int hashIndex(char *str,int seed,int hashSize);
 void initHashList(List *list,char *origin, char *destiny, int dayOfWeek, int delay);
 char **readNLines(FILE * fp,int numberOfLines);
@@ -23,6 +25,8 @@ void freeLines(char **strVec,int lineNumber);
 RBTree * createTree(char *filename);
 List * readList(FILE *fp);
 RBTree * readTree(char * filename);
+void printOnGnuPlot();
+void writeGnuPlotData(RBTree *tree,char *origin,char *destiny);
 
 int main(void) {
 
@@ -32,7 +36,9 @@ int main(void) {
     char *filename;
     char *input;
     FILE *f = NULL;
-
+  
+    printOnGnuPlot();
+    
     while(1){
         input = calloc(2,sizeof(char));
 	    filename = calloc(100,sizeof(char));
@@ -71,9 +77,21 @@ int main(void) {
                 tree = readTree(filename);
                 break;
             case '4':
-                printf("Introduca el nombre del archivo donde hacer el plot:\n");
-                scanf("%s",filename);
-                break;
+		if(tree!=NULL){
+			char *origen;
+			char *destino;
+			origen = malloc(4*sizeof(char));
+			destino = malloc(4*sizeof(char));
+			printf("Introduca el nombre del aeropuerto origen:\n");
+			scanf("%s",filename);
+			printf("Introduca el nombre del aeropuerto destino:\n");
+			scanf("%s",filename);
+			writeGnuPlotData(tree,origen,destino);
+			printOnGnuPlot();
+		}else{
+		  printf("El arbol esta vacio, imposible realizar la búsqueda\n");
+		}
+		break;
             case '5':
                 if(tree != NULL){
                     deleteTree(tree);
@@ -89,6 +107,36 @@ int main(void) {
         free(input);
 		free(filename);
     }
+}
+
+void writeGnuPlotData(RBTree *tree,char *origin,char *destiny){
+  FILE *f;
+  RBData *rbdata;
+  ListData *data;
+  int i;
+  f = fopen("gnuplotData.data","w");
+  if(f==NULL){
+    printf("Error abriendo archivo para escribir gnuplotData.data\n");
+    exit(0);
+  }
+  rbdata = findNode(tree,origin);
+  data = findList(rbdata->destiny,destiny);
+  for(i=0;i<7;i++){
+    fprintf(f,"%d %d\n",data->delay[i],data->delay[i+7]);
+  }
+  fclose(f);
+}
+
+void printOnGnuPlot(){
+  
+  FILE *gp;
+  gp = popen(GNUPLOT,"w");
+  if(gp == NULL){
+    printf("ERROR OPENING GNUPLOT\n");
+    exit(0);
+  }
+  fprintf(gp,"plot 'gnuplotData.data' with lines\n");
+  pclose(gp);
 }
 
 RBTree * createTree(char *filename){
@@ -219,7 +267,7 @@ List ** generateHash(char **str,int maxHashSize,int nLines){
         //This while will iterate over the lines of the file we are reading
         while (str[j][i] != '\0') {
             //When we find a comma
-            if (str[j][i] == ',') {
+	    if (str[j][i] == ',') {
                 //we store the left flag and right flag is where the 'new' comma is
                 leftFlag = rightFlag;
                 rightFlag = i;
