@@ -3,6 +3,7 @@
 #include <string.h>
 #include <ctype.h>
 #include <sys/stat.h>
+#include <pthread.h>
 
 #include "red-black-tree.h"
 
@@ -27,6 +28,15 @@ List * readList(FILE *fp);
 RBTree * readTree(char * filename);
 void printOnGnuPlot();
 void writeGnuPlotData(RBTree *tree,char *origin,char *destiny);
+void printRBData(RBData *data);
+
+
+typedef struct ThreadParameters_{
+  RBTree * tree;
+  FILE *file;
+}ThreadParameters;
+
+void *coreFunction(void * args);
 
 int main(void) {
 
@@ -99,6 +109,11 @@ int main(void) {
 	free(input);
 	free(filename);
 	return 0;
+      case '6':
+	if(tree!=NULL){
+	  printRBData(tree->root->data);
+	}
+	break;
       default:
 	printf("ATENCION: Opcion no reconocida\n");
 	printf("Introduca otra opcion\n");
@@ -106,6 +121,20 @@ int main(void) {
     }
     free(input);
     free(filename);
+  }
+}
+
+void printRBData(RBData *data){
+  int i,j;
+  ListItem *current;
+  printf("Origin airport: %s\n",data->key);
+  current = data->destiny->first;
+  for(i=0;i<(data->destiny->numItems);i++){
+    printf("\tDestiny: %s\n",current->data->key);
+    for(j=0;j<7;j++){
+      printf("\t\tDay of week %d ,%d trips,accumulated delay %d.\n",(j+1),current->data->delay[j+7],current->data->delay[j]);
+    }
+    current = current->next;
   }
 }
 
@@ -165,12 +194,13 @@ void printOnGnuPlot(){
 }
 
 RBTree * createTree(char *filename){
-    char **lines;
+    
     FILE *fp;
-    List **hash;
     RBTree *tree;
+    ThreadParameters * parameters;
+    pthread_t ntid;
+    parameters = malloc(sizeof(ThreadParameters));
     tree = (RBTree *) malloc(sizeof(RBTree));
-
     initTree(tree);
 
     fp = fopen(filename, "r");
@@ -178,24 +208,37 @@ RBTree * createTree(char *filename){
         printf("Could not open file '%s'\n", filename);
         exit(1);
     }
-    //while we dont reach the end of file
-    /**
-    while (fgets(line, MAXCHAR, fp) != NULL) {
-        processLine(line, &tree);
-        count(0);
-    }
-     **/
 
-    lines = readNLines(fp,N);
-    hash = generateHash(lines,MAXHASHSIZE,N);
-    addHashToTree(hash,MAXHASHSIZE,tree);
-
+    parameters->file = fp;
+    parameters->tree = tree;
+    pthread_create(&ntid,NULL,coreFunction,(void *)parameters);
+    pthread_join(ntid,(void *)parameters);
+    free(parameters);
     fclose(fp);
-    //we free all auxiliary data used.
-    freeLines(lines,N);
-    deleteHash(hash,MAXHASHSIZE);
-
     return tree;
+}
+
+void *coreFunction(void * args){
+  
+  FILE *fp;
+  RBTree * tree;
+  char **lines;
+  List **hash;
+  ThreadParameters *parameters;
+  parameters = (ThreadParameters *)args;
+  
+  fp = parameters->file;
+  tree = parameters->tree;
+  //printf("FILE POINTER%d\n",fp);
+  lines = readNLines(fp,N);
+  hash = generateHash(lines,MAXHASHSIZE,N);
+  addHashToTree(hash,MAXHASHSIZE,tree);
+  
+  freeLines(lines,N);
+  deleteHash(hash,MAXHASHSIZE);
+  
+  return ((void *)args);
+  
 }
 
 //This method adds a list to the hash, sets the two keys , delays and day of week.
