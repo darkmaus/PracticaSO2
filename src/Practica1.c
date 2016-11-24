@@ -30,99 +30,124 @@ void writeGnuPlotData(RBTree *tree,char *origin,char *destiny);
 
 int main(void) {
 
-    //C:\Users\Marcos\ClionProjects\SOPractica1Lloro\file.csv
-    //C:\Users\Marcos\Desktop\Practica1SO2\src\file.csv
-    RBTree *tree = NULL;
-    char *filename;
-    char *input;
-    FILE *f = NULL;
+  //C:\Users\Marcos\ClionProjects\SOPractica1Lloro\file.csv
+  //C:\Users\Marcos\Desktop\Practica1SO2\src\file.csv
+  RBTree *tree = NULL;
+  char *filename;
+  char *input;
+  FILE *f = NULL;
   
-    printOnGnuPlot();
-    
-    while(1){
-        input = calloc(2,sizeof(char));
-	    filename = calloc(100,sizeof(char));
-        printf("__________________________\n");
-        printf("Opciones:\n");
-        printf("1 - Crear arbol\n");
-        printf("2 - Almacenar arbol\n");
-        printf("3 - Leer arbol\n");
-        printf("4 - Grafica de retraso\n");
-        printf("5 - Salir\n");
-        printf("__________________________\n\n");
-        scanf(" %1s",input);
+  while(1){
+    input = calloc(2,sizeof(char));
+    filename = calloc(100,sizeof(char));
+    printf("__________________________\n");
+    printf("Opciones:\n");
+    printf("1 - Crear arbol\n");
+    printf("2 - Almacenar arbol\n");
+    printf("3 - Leer arbol\n");
+    printf("4 - Grafica de retraso\n");
+    printf("5 - Salir\n");
+    printf("__________________________\n\n");
+    scanf(" %1s",input);
 
-        switch(input[0]){
-            case '1': {
-                printf("Introduca el nombre del archivo: ");
-                scanf("%s",filename);
-                if (tree != NULL) {
-                    deleteTree(tree);
-                }
-                tree = createTree(filename);
-                }
-                break;
-            case '2':
-                printf("Introduca el nombre del archivo donde almacenarlo:\n");
-                scanf("%s",filename);
-                if(tree != NULL){
-                    f=fopen(filename,"w");
-                    writeNode(tree->root,f);
-                    fclose(f);
-                }
-                break;
-            case '3':
-                printf("Introduca el nombre del archivo de donde leerlo:\n");
-                scanf("%s",filename);
-                tree = readTree(filename);
-                break;
-            case '4':
-		if(tree!=NULL){
-			char *origen;
-			char *destino;
-			origen = malloc(4*sizeof(char));
-			destino = malloc(4*sizeof(char));
-			printf("Introduca el nombre del aeropuerto origen:\n");
-			scanf("%s",filename);
-			printf("Introduca el nombre del aeropuerto destino:\n");
-			scanf("%s",filename);
-			writeGnuPlotData(tree,origen,destino);
-			printOnGnuPlot();
-		}else{
-		  printf("El arbol esta vacio, imposible realizar la búsqueda\n");
-		}
-		break;
-            case '5':
-                if(tree != NULL){
-                    deleteTree(tree);
-                }
-				free(input);
-				free(filename);
-                return 0;
-            default:
-                printf("ATENCION: Opcion no reconocida\n");
-                printf("Introduca otra opcion\n");
-                break;
-        }
-        free(input);
-		free(filename);
+    switch(input[0]){
+      case '1':
+	printf("Introduca el nombre del archivo: ");
+	scanf("%s",filename);
+	if (tree != NULL) {
+	    deleteTree(tree);
+	}
+	tree = createTree(filename);
+	break;
+      case '2':
+	printf("Introduca el nombre del archivo donde almacenarlo:\n");
+	scanf("%s",filename);
+	if(tree != NULL){
+	  f=fopen(filename,"w");
+	  writeNode(tree->root,f);
+	  fclose(f);
+	}
+	break;
+      case '3':
+	printf("Introduca el nombre del archivo de donde leerlo:\n");
+	scanf("%s",filename);
+	if(tree!=NULL){
+	  deleteTree(tree);
+	}
+	tree = readTree(filename);
+	break;
+      case '4':
+	if(tree!=NULL){
+	  char *origen;
+	  char *destino;
+	  origen = malloc(4*sizeof(char));
+	  destino = malloc(4*sizeof(char));
+	  printf("Introduca el nombre del aeropuerto origen:\n");
+	  scanf("%s",origen);
+	  printf("Introduca el nombre del aeropuerto destino:\n");
+	  scanf("%s",destino);
+	  writeGnuPlotData(tree,origen,destino);
+	  printOnGnuPlot();
+	}else{
+	  printf("El arbol esta vacio, imposible realizar la búsqueda\n");
+	}
+	break;
+      case '5':
+	if(tree != NULL){
+	  deleteTree(tree);
+	}
+	free(input);
+	free(filename);
+	return 0;
+      default:
+	printf("ATENCION: Opcion no reconocida\n");
+	printf("Introduca otra opcion\n");
+	break;
     }
+    free(input);
+    free(filename);
+  }
 }
 
 void writeGnuPlotData(RBTree *tree,char *origin,char *destiny){
   FILE *f;
   RBData *rbdata;
   ListData *data;
-  int i;
+  int i,finaldelay[14];
+  
+  for(i=0;i<14;i++){
+    finaldelay[i] = 0;
+  }
+  
   f = fopen("gnuplotData.data","w");
   if(f==NULL){
     printf("Error abriendo archivo para escribir gnuplotData.data\n");
     exit(0);
   }
   rbdata = findNode(tree,origin);
-  data = findList(rbdata->destiny,destiny);
+  if(rbdata!=NULL){
+    data = findList(rbdata->destiny,destiny);
+    if(data!=NULL){
+      for(i=0;i<14;i++){
+	finaldelay[i] = data->delay[i];
+      }
+    }
+  }
+  rbdata = findNode(tree,destiny);
+  if(rbdata!=NULL){
+    data = findList(rbdata->destiny,origin);
+    if(data!=NULL){
+      for(i=0;i<14;i++){
+	finaldelay[i] += data->delay[i];
+      }
+    }
+  }
   for(i=0;i<7;i++){
-    fprintf(f,"%d %d\n",data->delay[i],data->delay[i+7]);
+    if(finaldelay[i+7]!=0){
+      fprintf(f,"%d %f\n",i,((float)finaldelay[i])/finaldelay[i+7]);
+    }else{
+      fprintf(f,"%d %f\n",i,0.0);
+    }
   }
   fclose(f);
 }
@@ -503,7 +528,6 @@ RBTree * readTree(char * filename){
     initTree(tree);
     f = fopen(filename,"r");
     while(fread(key,sizeof(char),4,f)!=0){
-        printf("%s\n",key);
         data = malloc(sizeof(RBData));
         data->key = key;
         data->destiny = readList(f);

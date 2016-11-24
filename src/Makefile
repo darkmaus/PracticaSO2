@@ -10,8 +10,7 @@ test: Practica1.o red-black-tree.o linked-list.o
 	$(CC) $(CFLAGS) -c -o $@ $^
 
 clean:
-	rm *.o test
-
+	rm *.o test *.data
 
 #
 #
