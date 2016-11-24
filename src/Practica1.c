@@ -77,6 +77,9 @@ int main(void) {
                 if(tree != NULL){
                     deleteTree(tree);
                 }
+		free(tree);
+		free(input);
+		free(filename);
                 return 0;
             default:
                 printf("ATENCION: Opcion no reconocida\n");
