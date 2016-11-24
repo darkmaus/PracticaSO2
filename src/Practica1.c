@@ -32,9 +32,10 @@ int main(void) {
     char *filename;
     char *input;
     FILE *f = NULL;
+
     while(1){
         input = calloc(2,sizeof(char));
-        filename = calloc(100,sizeof(char));
+	    filename = calloc(100,sizeof(char));
         printf("__________________________\n");
         printf("Opciones:\n");
         printf("1 - Crear arbol\n");
@@ -76,7 +77,6 @@ int main(void) {
             case '5':
                 if(tree != NULL){
                     deleteTree(tree);
-                    free(tree);
                 }
 				free(input);
 				free(filename);
@@ -86,8 +86,8 @@ int main(void) {
                 printf("Introduca otra opcion\n");
                 break;
         }
-        free(filename);
         free(input);
+		free(filename);
     }
 }
 
