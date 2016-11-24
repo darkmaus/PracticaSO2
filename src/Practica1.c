@@ -462,6 +462,7 @@ RBTree * readTree(char * filename){
         insertNode(tree,data);
         key = malloc(4*sizeof(char));
     }
+    free(key);
     fclose(f);
     return tree;
 }
