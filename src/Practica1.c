@@ -10,6 +10,11 @@
 #define MAXCHAR  200
 #define MAXHASHSIZE 500
 #define N 1000
+#define NUMBERTHREADS 4
+
+pthread_t ntid[NUMBERTHREADS];
+pthread_mutex_t mutexR = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t mutexW = PTHREAD_MUTEX_INITIALIZER;
 
 #define GNUPLOT "gnuplot -persist"
 
@@ -198,6 +203,7 @@ RBTree * createTree(char *filename){
     FILE *fp;
     RBTree *tree;
     ThreadParameters * parameters;
+    int i;
     pthread_t ntid;
     parameters = malloc(sizeof(ThreadParameters));
     tree = (RBTree *) malloc(sizeof(RBTree));
@@ -211,8 +217,12 @@ RBTree * createTree(char *filename){
 
     parameters->file = fp;
     parameters->tree = tree;
-    pthread_create(&ntid,NULL,coreFunction,(void *)parameters);
-    pthread_join(ntid,(void *)parameters);
+    for(i=0;i<NUMBERTHREADS;i++){
+      pthread_create(&ntid[i],NULL,coreFunction,(void *)parameters);
+    }
+    for(i=0;i<NUMBERTHREADS;i++){
+      pthread_join(ntid[i],(void *)parameters);
+    }
     free(parameters);
     fclose(fp);
     return tree;
@@ -230,9 +240,15 @@ void *coreFunction(void * args){
   fp = parameters->file;
   tree = parameters->tree;
   //printf("FILE POINTER%d\n",fp);
+  pthread_mutex_lock(&mutexR);
   lines = readNLines(fp,N);
+  pthread_mutex_unlock(&mutexR);
+  
   hash = generateHash(lines,MAXHASHSIZE,N);
+  
+  pthread_mutex_lock(&mutexW);
   addHashToTree(hash,MAXHASHSIZE,tree);
+  pthread_mutex_unlock(&mutexW);
   
   freeLines(lines,N);
   deleteHash(hash,MAXHASHSIZE);
