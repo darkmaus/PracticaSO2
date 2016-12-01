@@ -10,7 +10,7 @@
 #define MAXCHAR  200
 #define MAXHASHSIZE 500
 #define N 1000
-#define NUMBERTHREADS 4
+#define NUMBERTHREADS 8
 
 pthread_t ntid[NUMBERTHREADS];
 pthread_mutex_t mutexR = PTHREAD_MUTEX_INITIALIZER;
@@ -18,9 +18,14 @@ pthread_mutex_t mutexW = PTHREAD_MUTEX_INITIALIZER;
 
 #define GNUPLOT "gnuplot -persist"
 
+typedef struct LineData_{
+  char **vectorLines;
+  int numberOfLines;
+}LineData;
+
 int hashIndex(char *str,int seed,int hashSize);
 void initHashList(List *list,char *origin, char *destiny, int dayOfWeek, int delay);
-char **readNLines(FILE * fp,int numberOfLines);
+LineData *readNLines(FILE * fp,int numberOfLines);
 List ** generateHash(char **str,int maxHashSize,int nLines);
 void addHashToTree(List **hash,int maxHashSize, RBTree *tree);
 void mergeLists(RBData *treeData, List* hashList);
@@ -40,6 +45,9 @@ typedef struct ThreadParameters_{
   RBTree * tree;
   FILE *file;
 }ThreadParameters;
+
+//Estructura que nos retorna el vector que hemos leido y la cantidad de elementos leidos
+
 
 void *coreFunction(void * args);
 
@@ -204,7 +212,6 @@ RBTree * createTree(char *filename){
     RBTree *tree;
     ThreadParameters * parameters;
     int i;
-    pthread_t ntid;
     parameters = malloc(sizeof(ThreadParameters));
     tree = (RBTree *) malloc(sizeof(RBTree));
     initTree(tree);
@@ -232,7 +239,7 @@ void *coreFunction(void * args){
   
   FILE *fp;
   RBTree * tree;
-  char **lines;
+  LineData *data;
   List **hash;
   ThreadParameters *parameters;
   parameters = (ThreadParameters *)args;
@@ -240,19 +247,23 @@ void *coreFunction(void * args){
   fp = parameters->file;
   tree = parameters->tree;
   //printf("FILE POINTER%d\n",fp);
-  pthread_mutex_lock(&mutexR);
-  lines = readNLines(fp,N);
-  pthread_mutex_unlock(&mutexR);
-  
-  hash = generateHash(lines,MAXHASHSIZE,N);
-  
-  pthread_mutex_lock(&mutexW);
-  addHashToTree(hash,MAXHASHSIZE,tree);
-  pthread_mutex_unlock(&mutexW);
-  
-  freeLines(lines,N);
-  deleteHash(hash,MAXHASHSIZE);
-  
+  while(1){
+    pthread_mutex_lock(&mutexR);
+    data = readNLines(fp,N);
+    pthread_mutex_unlock(&mutexR);
+    if(data->numberOfLines==0){
+      free(data);
+      return ((void *)args);
+    }
+    hash = generateHash(data->vectorLines,MAXHASHSIZE,data->numberOfLines);
+    
+    pthread_mutex_lock(&mutexW);
+    addHashToTree(hash,MAXHASHSIZE,tree);
+    pthread_mutex_unlock(&mutexW);
+    freeLines(data->vectorLines,data->numberOfLines);
+    free(data);
+    deleteHash(hash,MAXHASHSIZE);
+  }
   return ((void *)args);
   
 }
@@ -440,46 +451,65 @@ void addHashToTree(List **hash,int maxHashSize, RBTree *tree){
 //Function that adds a list to another list in the tree.
 void mergeLists(RBData *treeData, List* hashList){
 
-    int i,j,k;
+    int i,j,k,found;
     ListItem *currentItem,*currentTreeItem;
     currentItem = hashList->first;
-    currentTreeItem = treeData->destiny->first;
+    
+    
     for(i=1;i<hashList->numItems;i++){
+	currentTreeItem = treeData->destiny->first;
+        found=0;
         for(j=1;j<treeData->destiny->numItems;j++){
             if(strcmp(currentTreeItem->data->key,currentItem->data->key)==0){
+	        found=1;
                 for(k=0;k<14;k++){
                     currentTreeItem->data->delay[k]+=currentItem->data->delay[k];
                 }
-            }else{
+	    }
+	    currentTreeItem = currentTreeItem->next;
+	}
+	if (!found) {
                 //ListData *auxiliar;
                 //auxiliar = (ListData *) malloc(sizeof(ListData));
                 //memcpy((void *)auxiliar,currentItem->data,sizeof(ListData));
                 insertList(treeData->destiny, copyListData(currentItem->data));
-            }
         }
+        currentItem = currentItem->next;
     }
     treeData->num = treeData->destiny->numItems;
 }
 
 //Function that reads numberOfLines lines of the file.
-char **readNLines(FILE * fp,int numberOfLines){
+LineData *readNLines(FILE * fp,int numberOfLines){
 
     int counter=0;
     char *line;
+    char *returnPointer;
     char **lineVector;
+    LineData *data;
+    
+    data = (LineData *) calloc(1,sizeof(LineData));
     lineVector = (char **) calloc(numberOfLines,sizeof(char *));
     line = (char *) calloc(MAXCHAR,sizeof(char));
-
-    while(fgets(line, MAXCHAR, fp) != NULL && counter<numberOfLines){
+    returnPointer = fgets(line, MAXCHAR, fp);
+    
+    while( returnPointer != NULL && counter<numberOfLines){
 
         lineVector[counter] = line;
         line = (char *) calloc(MAXCHAR,sizeof(char));
-
         counter++;
+	returnPointer = fgets(line, MAXCHAR, fp);
     }
+    
+    if(returnPointer==NULL){
+      data->numberOfLines = counter;
+    }else{
+      data->numberOfLines = numberOfLines;
+    }
+    data->vectorLines = lineVector;
     free(line);
 
-    return lineVector;
+    return data;
 }
 
 //Function that copy a ListData struct to another.
