@@ -11,12 +11,18 @@
 #define MAXHASHSIZE 500
 #define N 1000
 #define NUMBERTHREADS 2
+#define SIZEOFBUFFER 2
 
-pthread_t ntid[NUMBERTHREADS];
+pthread_t ntid[NUMBERTHREADS+1];
 pthread_mutex_t mutexR = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t mutexW = PTHREAD_MUTEX_INITIALIZER;
 
 #define GNUPLOT "gnuplot -persist"
+
+int w=0,r=0,contador=0;
+pthread_cond_t condP = PTHREAD_COND_INITIALIZER;
+pthread_cond_t condC = PTHREAD_COND_INITIALIZER;
+int finalDeLectura=0;
 
 typedef struct LineData_{
   char **vectorLines;
@@ -44,12 +50,15 @@ void printRBData(RBData *data);
 typedef struct ThreadParameters_{
   RBTree * tree;
   FILE *file;
+  LineData **buffer;
 }ThreadParameters;
 
 //Estructura que nos retorna el vector que hemos leido y la cantidad de elementos leidos
 
 
 void *coreFunction(void * args);
+void *coreReaderFunction(void * args);
+void *coreWriterFunction(void * args);
 
 int main(void) {
 
@@ -224,12 +233,17 @@ RBTree * createTree(char *filename){
 
     parameters->file = fp;
     parameters->tree = tree;
+    parameters->buffer = (LineData **) malloc(sizeof(SIZEOFBUFFER*sizeof(LineData *)));
     for(i=0;i<NUMBERTHREADS;i++){
-      pthread_create(&ntid[i],NULL,coreFunction,(void *)parameters);
+      pthread_create(&ntid[i],NULL,coreWriterFunction,(void *)parameters);
     }
+    pthread_create(&ntid[NUMBERTHREADS],NULL,coreReaderFunction,(void *)parameters);
+    
     for(i=0;i<NUMBERTHREADS;i++){
       pthread_join(ntid[i],(void *)parameters);
     }
+    pthread_join(ntid[NUMBERTHREADS],(void *)parameters);
+    
     free(parameters);
     fclose(fp);
     return tree;
@@ -266,6 +280,82 @@ void *coreFunction(void * args){
   }
   return ((void *)args);
   
+}
+
+
+void *coreReaderFunction(void * args){
+  
+  FILE *fp;
+  ThreadParameters *parameters;
+  parameters = (ThreadParameters *)args;
+  LineData *data;
+  LineData **buffer;
+  int finalaaa;
+  
+  fp = parameters->file;
+  buffer = parameters->buffer;
+  finalaaa = 0;
+  
+  while(!finalaaa){
+    data = readNLines(fp,N);
+    pthread_mutex_lock(&mutexW);
+    while(contador==SIZEOFBUFFER){
+       pthread_cond_wait(&condP,&mutexW);
+    }
+    if(data->numberOfLines==0){
+      finalaaa = 1;
+    }
+    buffer[w] = data;
+    w=(w+1)%SIZEOFBUFFER;
+    contador++;
+    pthread_cond_signal(&condC);
+    pthread_mutex_unlock(&mutexW);
+    
+    if (finalaaa == 1){
+      free(data);
+      finalDeLectura=1;
+      pthread_mutex_lock(&mutexW);
+      pthread_cond_broadcast(&condC);
+      pthread_mutex_unlock(&mutexW);
+      return ((void *)args);
+    }
+  }
+}
+
+void *coreWriterFunction(void * args){
+  ThreadParameters *parameters;
+  parameters = (ThreadParameters *)args;
+  LineData *data;
+  List **hash;
+  LineData **buffer;
+  RBTree * tree;
+  
+  
+  tree = parameters->tree;
+  buffer = parameters->buffer;
+  
+  while(1){
+    pthread_mutex_lock(&mutexW);
+    while(contador==0){
+      if(finalDeLectura){
+	return ((void *)args);
+      }
+      pthread_cond_wait(&condC,&mutexW);
+    }
+    data = buffer[r];
+    r=(r+1)%SIZEOFBUFFER;
+    contador--;
+    hash = generateHash(data->vectorLines,MAXHASHSIZE,data->numberOfLines);
+    pthread_cond_signal(&condP);
+    pthread_mutex_unlock(&mutexW);
+    
+    pthread_mutex_lock(&mutexR);
+    addHashToTree(hash,MAXHASHSIZE,tree);
+    pthread_mutex_unlock(&mutexR);
+    
+    free(data);
+    deleteHash(hash,MAXHASHSIZE);
+  }
 }
 
 //This method adds a list to the hash, sets the two keys , delays and day of week.
