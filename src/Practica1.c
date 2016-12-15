@@ -10,7 +10,7 @@
 #define MAXCHAR  200
 #define MAXHASHSIZE 500
 #define N 1000
-#define NUMBERTHREADS 1
+#define NUMBERTHREADS 2
 
 pthread_t ntid[NUMBERTHREADS];
 pthread_mutex_t mutexR = PTHREAD_MUTEX_INITIALIZER;
