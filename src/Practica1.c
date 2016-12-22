@@ -10,8 +10,8 @@
 #define MAXCHAR  200
 #define MAXHASHSIZE 500
 #define N 1000
-#define NUMBERTHREADS 2
-#define SIZEOFBUFFER 2
+#define NUMBERTHREADS 8
+#define SIZEOFBUFFER 8
 
 pthread_t ntid[NUMBERTHREADS+1];
 pthread_mutex_t mutexR = PTHREAD_MUTEX_INITIALIZER;
@@ -79,6 +79,7 @@ int main(void) {
     printf("3 - Leer arbol\n");
     printf("4 - Grafica de retraso\n");
     printf("5 - Salir\n");
+    printf("6 - Imprimir datos por pantalla\n");
     printf("__________________________\n\n");
     scanf(" %1s",input);
 
@@ -292,6 +293,7 @@ void *coreProductorFunction(void * args){
   LineData *data;
   LineData **buffer;
   int finalaaa;
+  int i;
   
   fp = parameters->file;
   buffer = parameters->buffer;
@@ -305,6 +307,11 @@ void *coreProductorFunction(void * args){
     }
     if(data->numberOfLines==0){
       finalaaa = 1;
+      for(i=0;i<N;i++){
+	free(data->vectorLines[i]);
+      }
+      free(data->vectorLines);
+      free(data);
     }else{
     buffer[w] = data;
     w=(w+1)%SIZEOFBUFFER;
@@ -330,7 +337,7 @@ void *coreConsumerFunction(void * args){
   List **hash;
   LineData **buffer;
   RBTree * tree;
-  
+  int i;
   
   tree = parameters->tree;
   buffer = parameters->buffer;
@@ -357,6 +364,10 @@ void *coreConsumerFunction(void * args){
     addHashToTree(hash,MAXHASHSIZE,tree);
     pthread_mutex_unlock(&mutexR);
     
+    for(i=0;i<N;i++){
+      free(data->vectorLines[i]);
+    }
+    free(data->vectorLines);
     free(data);
     deleteHash(hash,MAXHASHSIZE);
   }
@@ -602,7 +613,6 @@ LineData *readNLines(FILE * fp,int numberOfLines){
     }
     data->vectorLines = lineVector;
     free(line);
-
     return data;
 }
 
