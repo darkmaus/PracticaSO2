@@ -57,8 +57,8 @@ typedef struct ThreadParameters_{
 
 
 void *coreFunction(void * args);
-void *coreReaderFunction(void * args);
-void *coreWriterFunction(void * args);
+void *coreProductorFunction(void * args);
+void *coreConsumerFunction(void * args);
 
 int main(void) {
 
@@ -233,17 +233,18 @@ RBTree * createTree(char *filename){
 
     parameters->file = fp;
     parameters->tree = tree;
-    parameters->buffer = (LineData **) malloc(sizeof(SIZEOFBUFFER*sizeof(LineData *)));
+    parameters->buffer = (LineData **) malloc(SIZEOFBUFFER*sizeof(LineData *));
     for(i=0;i<NUMBERTHREADS;i++){
-      pthread_create(&ntid[i],NULL,coreWriterFunction,(void *)parameters);
+      pthread_create(&ntid[i],NULL,coreConsumerFunction,(void *)parameters);
     }
-    pthread_create(&ntid[NUMBERTHREADS],NULL,coreReaderFunction,(void *)parameters);
+    pthread_create(&ntid[NUMBERTHREADS],NULL,coreProductorFunction,(void *)parameters);
     
     for(i=0;i<NUMBERTHREADS;i++){
       pthread_join(ntid[i],(void *)parameters);
     }
     pthread_join(ntid[NUMBERTHREADS],(void *)parameters);
     
+    free(parameters->buffer);
     free(parameters);
     fclose(fp);
     return tree;
@@ -283,7 +284,7 @@ void *coreFunction(void * args){
 }
 
 
-void *coreReaderFunction(void * args){
+void *coreProductorFunction(void * args){
   
   FILE *fp;
   ThreadParameters *parameters;
@@ -304,25 +305,25 @@ void *coreReaderFunction(void * args){
     }
     if(data->numberOfLines==0){
       finalaaa = 1;
-    }
+    }else{
     buffer[w] = data;
     w=(w+1)%SIZEOFBUFFER;
     contador++;
+    }
     pthread_cond_signal(&condC);
     pthread_mutex_unlock(&mutexW);
     
     if (finalaaa == 1){
-      free(data);
       finalDeLectura=1;
       pthread_mutex_lock(&mutexW);
       pthread_cond_broadcast(&condC);
       pthread_mutex_unlock(&mutexW);
-      return ((void *)args);
     }
   }
+  return ((void *)args);
 }
 
-void *coreWriterFunction(void * args){
+void *coreConsumerFunction(void * args){
   ThreadParameters *parameters;
   parameters = (ThreadParameters *)args;
   LineData *data;
@@ -338,6 +339,8 @@ void *coreWriterFunction(void * args){
     pthread_mutex_lock(&mutexW);
     while(contador==0){
       if(finalDeLectura){
+	pthread_cond_broadcast(&condC);
+	pthread_mutex_unlock(&mutexW);
 	return ((void *)args);
       }
       pthread_cond_wait(&condC,&mutexW);
@@ -345,9 +348,10 @@ void *coreWriterFunction(void * args){
     data = buffer[r];
     r=(r+1)%SIZEOFBUFFER;
     contador--;
-    hash = generateHash(data->vectorLines,MAXHASHSIZE,data->numberOfLines);
     pthread_cond_signal(&condP);
     pthread_mutex_unlock(&mutexW);
+    
+    hash = generateHash(data->vectorLines,MAXHASHSIZE,data->numberOfLines);
     
     pthread_mutex_lock(&mutexR);
     addHashToTree(hash,MAXHASHSIZE,tree);
