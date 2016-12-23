@@ -13,17 +13,28 @@
 #define NUMBERTHREADS 8
 #define SIZEOFBUFFER 8
 
+//Lista para los threads
 pthread_t ntid[NUMBERTHREADS+1];
+//Mutex para los productores y los consumidores
 pthread_mutex_t mutexR = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t mutexW = PTHREAD_MUTEX_INITIALIZER;
 
+//Define para facilitar el gnuplot
 #define GNUPLOT "gnuplot -persist"
 
+//Variables para controlar el lugar actual de lectura y el lugar actual de escritura
+//para que los threads no se pisen a la hora de escribir en el buffer, y de leer en el
+//buffer
+//Contador indica la cantidad de posiciones del buffer que hay utilizadas actualmente
 int w=0,r=0,contador=0;
+//Inicializamos los threads
 pthread_cond_t condP = PTHREAD_COND_INITIALIZER;
 pthread_cond_t condC = PTHREAD_COND_INITIALIZER;
+//Variable que indica si hemos terminado de leer el archivo
 int finalDeLectura=0;
 
+//Estructura que produce el productor y que es pasada a los consumidores, contiene las lineas leidas
+//y la cantidad de lineas que ha leido
 typedef struct LineData_{
   char **vectorLines;
   int numberOfLines;
@@ -46,15 +57,13 @@ void printOnGnuPlot();
 void writeGnuPlotData(RBTree *tree,char *origin,char *destiny);
 void printRBData(RBData *data);
 
-
+//Parametros que le pasamos a los threads, el arbol a inicializar, el archivo a leer, y el buffer donde
+//escribimos lo producido y le pasamos a los consumidores
 typedef struct ThreadParameters_{
   RBTree * tree;
   FILE *file;
   LineData **buffer;
 }ThreadParameters;
-
-//Estructura que nos retorna el vector que hemos leido y la cantidad de elementos leidos
-
 
 void *coreFunction(void * args);
 void *coreProductorFunction(void * args);
@@ -62,13 +71,12 @@ void *coreConsumerFunction(void * args);
 
 int main(void) {
 
-  //C:\Users\Marcos\ClionProjects\SOPractica1Lloro\file.csv
-  //C:\Users\Marcos\Desktop\Practica1SO2\src\file.csv
   RBTree *tree = NULL;
   char *filename;
   char *input;
   FILE *f = NULL;
   
+  //Bucle que repite las opciones hasta que se selecciona la 5, que hace que termine el programa
   while(1){
     input = calloc(2,sizeof(char));
     filename = calloc(100,sizeof(char));
@@ -147,6 +155,7 @@ int main(void) {
   }
 }
 
+//Método que imprime por salida estandar los datos que contiene el arbol, si es que contiene datos
 void printRBData(RBData *data){
   int i,j;
   ListItem *current;
@@ -161,6 +170,8 @@ void printRBData(RBData *data){
   }
 }
 
+//Método que escribe en el gnuplot y muestra una grafica en funcion del dia de la semana el retraso,
+//este método solo escribe un archivo que lo lee printOnGnuplot
 void writeGnuPlotData(RBTree *tree,char *origin,char *destiny){
   FILE *f;
   RBData *rbdata;
@@ -204,6 +215,7 @@ void writeGnuPlotData(RBTree *tree,char *origin,char *destiny){
   fclose(f);
 }
 
+//Muestra la grafica en una nueva ventana
 void printOnGnuPlot(){
   
   FILE *gp;
@@ -216,6 +228,7 @@ void printOnGnuPlot(){
   pclose(gp);
 }
 
+//Método principal de creación de hilos
 RBTree * createTree(char *filename){
     
     FILE *fp;
@@ -231,26 +244,32 @@ RBTree * createTree(char *filename){
         printf("Could not open file '%s'\n", filename);
         exit(1);
     }
-
+    //Inicializo los parametros una vez he creado el espacio para ellos
     parameters->file = fp;
     parameters->tree = tree;
     parameters->buffer = (LineData **) malloc(SIZEOFBUFFER*sizeof(LineData *));
+    //Creo n threads para el consumo de lo que produzca el productor
     for(i=0;i<NUMBERTHREADS;i++){
       pthread_create(&ntid[i],NULL,coreConsumerFunction,(void *)parameters);
     }
+    //Creo al productor
     pthread_create(&ntid[NUMBERTHREADS],NULL,coreProductorFunction,(void *)parameters);
     
+    //Espero a que terminen todos
     for(i=0;i<NUMBERTHREADS;i++){
       pthread_join(ntid[i],(void *)parameters);
     }
     pthread_join(ntid[NUMBERTHREADS],(void *)parameters);
     
+    //Libero las variables para las que he reservado memoria
     free(parameters->buffer);
     free(parameters);
     fclose(fp);
     return tree;
 }
 
+//Funcion principal para un thread, ésta consiste en utilizar dos mutex, uno para bloquear
+//la lectura y el otro para bloquear la escritura, el resto sique siendo lo mismo que la practica anterior,
 void *coreFunction(void * args){
   
   FILE *fp;
@@ -267,6 +286,7 @@ void *coreFunction(void * args){
     pthread_mutex_lock(&mutexR);
     data = readNLines(fp,N);
     pthread_mutex_unlock(&mutexR);
+    //En el caso en que no haya leido lineas, libero la memoria reservada para data, y retorno.
     if(data->numberOfLines==0){
       free(data);
       return ((void *)args);
@@ -284,7 +304,7 @@ void *coreFunction(void * args){
   
 }
 
-
+//Método principal del productor
 void *coreProductorFunction(void * args){
   
   FILE *fp;
@@ -292,35 +312,46 @@ void *coreProductorFunction(void * args){
   parameters = (ThreadParameters *)args;
   LineData *data;
   LineData **buffer;
-  int finalaaa;
+  int finalOfProduction;
   int i;
-  
+  //Guardo en variables locales los atributos por comodidad.
   fp = parameters->file;
   buffer = parameters->buffer;
-  finalaaa = 0;
+  //Variable para indicar que he terminado de producir
+  finalOfProduction = 0;
   
-  while(!finalaaa){
+  while(!finalOfProduction){
+  	//Leo las lineas
     data = readNLines(fp,N);
+ 	//"Cojo" el mutexW
     pthread_mutex_lock(&mutexW);
+    //En el caso en que no tenga mas espacio en el buffer espero a que consuman espacio, por ello
+    //tengo el wait para esperar a que me despierten cuando consuman algo de lo que ha producido
     while(contador==SIZEOFBUFFER){
        pthread_cond_wait(&condP,&mutexW);
     }
+    //En el caso en que no haya leido lineas, cambio la variable y libero espacio reservado
     if(data->numberOfLines==0){
-      finalaaa = 1;
+      finalOfProduction = 1;
       for(i=0;i<N;i++){
-	free(data->vectorLines[i]);
+		free(data->vectorLines[i]);
       }
       free(data->vectorLines);
       free(data);
+      //En caso que no, copio la referencia en el buffer e incremento la posicion en la que escribire
     }else{
     buffer[w] = data;
     w=(w+1)%SIZEOFBUFFER;
+    //Incremento el contador para indicar que hay una posicion mas ocupada en el buffer
     contador++;
     }
+    //Despierto a un consumido en el caso en que haya alguno durmiendo en condC
     pthread_cond_signal(&condC);
+    //Desbloqueo la llave
     pthread_mutex_unlock(&mutexW);
-    
-    if (finalaaa == 1){
+    //Si he terminado, aviso a todos los productores para que terminen y cambio la variable global para
+    //indicar que terminado de leer
+    if (finalOfProduction == 1){
       finalDeLectura=1;
       pthread_mutex_lock(&mutexW);
       pthread_cond_broadcast(&condC);
@@ -330,6 +361,7 @@ void *coreProductorFunction(void * args){
   return ((void *)args);
 }
 
+//El consumer es parecido al productor
 void *coreConsumerFunction(void * args){
   ThreadParameters *parameters;
   parameters = (ThreadParameters *)args;
@@ -339,11 +371,15 @@ void *coreConsumerFunction(void * args){
   RBTree * tree;
   int i;
   
+  //Por comodidad, asigno a variables locales lo pasado por argumento
   tree = parameters->tree;
   buffer = parameters->buffer;
   
   while(1){
+  	//Cojo la llave mutexW
     pthread_mutex_lock(&mutexW);
+    //Si no hay nada en el buffer y no he terminado de leer el hilo se pone a dormir hasta que 
+    //me avisen, si he terminado, aviso al resto de productores y libero la llave
     while(contador==0){
       if(finalDeLectura){
 	pthread_cond_broadcast(&condC);
@@ -352,18 +388,25 @@ void *coreConsumerFunction(void * args){
       }
       pthread_cond_wait(&condC,&mutexW);
     }
+    //Copio la direccion de los datos a consumir en la variable data e incremento la variable de lectura,
+    //y decremento el contador para indicar que hay un hueco mas libre en el buffer
     data = buffer[r];
     r=(r+1)%SIZEOFBUFFER;
     contador--;
+    //Aviso a los productores de que he consumido un dato
     pthread_cond_signal(&condP);
+    //Libero la llava
     pthread_mutex_unlock(&mutexW);
     
+    //Consumo los datos
     hash = generateHash(data->vectorLines,MAXHASHSIZE,data->numberOfLines);
     
+    //Cojo la llave para añadir los datos al arbol y luego libero la llave una vez los he añadido
     pthread_mutex_lock(&mutexR);
     addHashToTree(hash,MAXHASHSIZE,tree);
     pthread_mutex_unlock(&mutexR);
     
+    //Libero la memoria de las variables que ya he utilizado y no voy a volver a utilizar
     for(i=0;i<N;i++){
       free(data->vectorLines[i]);
     }
